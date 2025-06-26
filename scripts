@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# === Replace with your connection info ===
+ENDPOINT="https://myappconfig.azconfig.io"
+ID="abc123"
+SECRET="xyz456"
+
+# === Prepare request values ===
+API_VERSION="1.0"
+REQ_METHOD="GET"
+REQ_PATH="/kv"
+REQ_QUERY="?api-version=$API_VERSION"
+REQ_URL="$ENDPOINT$REQ_PATH$REQ_QUERY"
+REQ_DATE=$(TZ=GMT date "+%a, %d %b %Y %H:%M:%S GMT")
+HOST=$(echo $ENDPOINT | sed -E 's~https?://~~')
+
+# === Construct the string-to-sign ===
+STRING_TO_SIGN="$REQ_METHOD\n$REQ_PATH\n$REQ_QUERY\nx-ms-date:$REQ_DATE;host:$HOST\n"
+
+# === Decode the secret from base64 and sign ===
+DECODED_SECRET=$(echo -n "$SECRET" | base64 -d | xxd -p -c 1000)
+SIGNATURE=$(printf "$STRING_TO_SIGN" | \
+  openssl dgst -sha256 -mac HMAC -macopt hexkey:$DECODED_SECRET -binary | base64)
+
+# === Build Authorization header ===
+AUTH_HEADER="HMAC-SHA256 Credential=$ID&SignedHeaders=x-ms-date;host&Signature=$SIGNATURE"
+
+# === Make the curl call ===
+curl -s -H "x-ms-date: $REQ_DATE" \
+     -H "Authorization: $AUTH_HEADER" \
+     "$REQ_URL"
