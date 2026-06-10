@@ -1,0 +1,32 @@
+name: Publish Tools as Release Artifacts
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  publish-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: List files in tools directory
+        run: |
+          echo "Files in tools directory:"
+          ls -la ./
+
+      - name: Upload files as release assets
+        run: |
+          for file in *; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              echo "Uploading $filename as release asset"
+              gh release upload ${{ github.event.release.tag_name }} "$file" --clobber
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
